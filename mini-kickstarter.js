@@ -1,13 +1,16 @@
 
 
-
+// Include vorpal. Vorpal is a package that helps developers build command line apps with Javascript.
 const vorpal = require('vorpal')();
 
+// Create a list of all projects and all backers.
 projects = [];
 backers = [];
 
-
 // Helper functions
+// -----------------------------
+
+// A simple function to determine if a string is alphanumeric (plus dashes and underscores)
 function isAlphanumeric(string){
   if( /[^a-zA-Z0-9-_]/.test(string)){
     return false;
@@ -16,6 +19,7 @@ function isAlphanumeric(string){
   }
 }
 
+// A function that determines whether a project (as identified by name) exists, and if so, returns it.
 function findProject(projectName){
   for (i=0; i<projects.length; i++){
     if (projects[i].name == projectName){
@@ -27,6 +31,7 @@ function findProject(projectName){
   return false;
 }
 
+// A function that determines whether a backer (as identified by name) exists, and if so, returns it.
 function findBacker(backerName){
   for (i=0; i<backers.length; i++){
     if (backers[i].name == backerName){
@@ -38,17 +43,17 @@ function findBacker(backerName){
   return false;
 }
 
+// A function that determines whether a credit card number satisfies the Lunh-10 algorithm.
 function validateCreditCard(value){
-     
   var totalSum = 0;
   var newDigit = 0; 
   var isEveryOtherDigit = false;
-  // Eliminate any digits from the string, in case the user input dashes or spaces, etc.
+  // Eliminate any non-numbers from the string, in case the user input dashes or spaces, etc.
   var valueAsString = String(value);
   valueAsString = valueAsString.replace(/\D/g, "");
+  
   // Move leftwards from the final digit.
   for (var n = valueAsString.length - 1; n >= 0; n--) {
-
     var currentDigit = valueAsString.charAt(n),
     newDigit = parseInt(currentDigit, 10);
     // Only double every other digit...
@@ -67,8 +72,11 @@ function validateCreditCard(value){
   return (totalSum % 10) == 0;
 }
 
-// Define Vorpal Commands
+// Define Vorpal (command line) Commands
+// -----------------------------
+// In general, the command method specifies mandatory arguments that are then supplied in the 'args' array. The validate function is run -- if it returns true, the action method is invoked. The callback returns the user to the command line prompt.
 
+// The 'backer' command lists the projects a backer has pledged to.
 vorpal.command('backer <givenName>', 'Lists the projects a backer has backed')
   .validate(function(args) {
     var thisBacker = findBacker(args.givenName);  
@@ -80,13 +88,13 @@ vorpal.command('backer <givenName>', 'Lists the projects a backer has backed')
   }).action(function(args, callback){
     var thisBacker = findBacker(args.givenName); 
     // Iterate through the projects this backer has backed
-
     for (i = 0; i < thisBacker.projectsBacked.length; i++){
       this.log("-- backed " + thisBacker.projectsBacked[i].project + " for $" + thisBacker.projectsBacked[i].amount.toFixed(2));
     }
     callback();
   });
 
+// The 'list' command lists a project's backers and the status of a project.
 vorpal.command('list <projectName>', 'Lists a project\'s backers and the status of a project.')
   .validate(function(args) {
     // Check if this project exists --
@@ -102,10 +110,10 @@ vorpal.command('list <projectName>', 'Lists a project\'s backers and the status 
     var totalPledgedAmount = 0;
     var backers = thisProject.backers;
     for (j = 0; j < backers.length; j++){
-      this.log("-- " + backers[j].name + " pledged $" + backers[j].backingAmount + "!");
+      this.log("-- " + backers[j].name + " pledged $" + backers[j].backingAmount.toFixed(2) + "!");
       totalPledgedAmount += backers[j].backingAmount;
     }
-    this.log("Total pledged: $" + parseFloat(totalPledgedAmount).toFixed(2));
+    this.log("Total pledged: $" + totalPledgedAmount.toFixed(2));
     if (totalPledgedAmount >= thisProject.targetAmount){
       // Project was backed successfully!
       this.log(thisProject.name + " is successful!")
@@ -117,6 +125,7 @@ vorpal.command('list <projectName>', 'Lists a project\'s backers and the status 
     callback();
   })
 
+// The 'back' command backs a project with the specified backer name, credit card info, and backing amount.
 vorpal.command('back <backerName> <projectName> <creditCardNumber> <backingAmount>', 'Backs a project with the specified backer name, credit card info, and backing amount.')
   .validate(function(args) {
 
@@ -124,17 +133,14 @@ vorpal.command('back <backerName> <projectName> <creditCardNumber> <backingAmoun
     if (args.backerName.length < 4 || args.backerName.length > 20){
       return "Please enter a name that consists of between 4 and 20 characters."
     }
-
     // Make sure the backer name is alphanumeric.
     if (!isAlphanumeric(args.backerName)){
       return "Please enter a name using only letters, numbers, underscores and dashes."
     }
-
     // Make sure the dollar amount is numeric.
     if (isNaN(args.backingAmount)){
       return "Please format the backing amount as a number without a dollar sign.";
     }
-
     var thisProject = findProject(args.projectName);
     if (thisProject){
       // The project exists, but is the credit card number valid?
@@ -149,9 +155,12 @@ vorpal.command('back <backerName> <projectName> <creditCardNumber> <backingAmoun
         return "Please enter a valid Credit Card number."
         // Check if the credit card number already exists in this project.
       } else {
-        // Iterate through this projects backers and check that this credit card hasn't been used already.
+        // Iterate through this projects backers and check that this name and credit card haven't been used already.
         for (var i = 0; i<thisProject.backers.length; i++){
           var thisBacker = thisProject.backers[i];
+          if (thisBacker.name == args.backerName){
+            return "Sorry, that backer has already backed this project!"
+          }
           if (thisBacker.creditCardNumber == args.creditCardNumber){
             return "Sorry, this Credit Card has already been used to back this project.";
           } 
@@ -165,51 +174,50 @@ vorpal.command('back <backerName> <projectName> <creditCardNumber> <backingAmoun
   }).action(function(args, callback){
     var thisProject = findProject(args.projectName);
     // push this backer's information to the project's backer array.
-    var thisBacker = { 'name' : args.backerName, 'backingAmount' : args.backingAmount.toFixed(2), 'creditCardNumber' : args.creditCardNumber};
+    var thisBacker = { 'name' : args.backerName, 'backingAmount' : args.backingAmount, 'creditCardNumber' : args.creditCardNumber};
     thisProject.backers.push(thisBacker);
 
     // additionally, log this activity in the backers array. First, find out if this backer already exists.
     var thisBacker = findBacker(args.backerName);
     if (thisBacker){
       // If this backer already exists, insert this project in his/her projectsBacked array;
-      thisBacker.projectsBacked.push({'project' : args.projectName, 'amount': args.backingAmount.toFixed(2)})
+      thisBacker.projectsBacked.push({'project' : args.projectName, 'amount': args.backingAmount})
     } else {
       // Otherwise, enter a new backer into the backer array;
-      var backerObject = {'name' : args.backerName, 'projectsBacked' : [{ 'project' : args.projectName, 'amount' : args.backingAmount.toFixed(2)}] };
+      var backerObject = {'name' : args.backerName, 'projectsBacked' : [{ 'project' : args.projectName, 'amount' : args.backingAmount}] };
       backers.push(backerObject);
     }
     this.log ("Project succesfully backed!")
     callback();
   })
 
-    vorpal
-      .command('project <projectName> <targetAmount>', 'Creates a new mini-kickstarter project')
-      .validate(function (args) {
-      	// Ensure the project name is valid and has not already been taken	
-      	if (!isAlphanumeric(args.projectName) && !findProject(args.projectName)){
-      		return "That's not a valid name, fool!"
-      	}
-        // Ensure the project name is no shorter than 4 characters but no longer than 20 characters 
-        if (args.projectName.length < 4 || args.projectName.length > 20){
-          return "Please use a name that consists of between 4 and 20 characters."
-        }
-        // Ensure the target amount is numeric.
-        if (isNaN(args.targetAmount)){
-   		   return "Please format the target amount as a number without a dollar sign.";
-   		  }
-      return true;
-      })
-      .action(function(args, callback) {
-        // Add the new project into the projects array.
-        var newProject = {
-   			'name' : args.projectName,
-   			'targetAmount' : args.targetAmount.toFixed(2),
-   			'backers' : []
-   		}
-
-   		projects.push(newProject);
-      callback();
-      });
+// the 'project' command creates a new mini-kickstarter project with the provided name and target amount.
+vorpal.command('project <projectName> <targetAmount>', 'Creates a new mini-kickstarter project')
+  .validate(function (args) {
+  	// Ensure the project name is valid and has not already been taken	
+  	if (!isAlphanumeric(args.projectName) && !findProject(args.projectName)){
+  		return "That's not a valid name, fool!"
+  	}
+    // Ensure the project name is no shorter than 4 characters but no longer than 20 characters 
+    if (args.projectName.length < 4 || args.projectName.length > 20){
+      return "Please use a name that consists of between 4 and 20 characters."
+    }
+    // Ensure the target amount is numeric.
+    if (isNaN(args.targetAmount)){
+		  return "Please format the target amount as a number without a dollar sign.";
+		}  
+    return true;
+  })
+  .action(function(args, callback) {
+    // Add the new project into the projects array.
+    var newProject = {
+			'name' : args.projectName,
+			'targetAmount' : args.targetAmount,
+			'backers' : []
+		}
+    projects.push(newProject);
+    callback();
+  });
 
 vorpal.delimiter('mini-kickstarter$').show()
       
