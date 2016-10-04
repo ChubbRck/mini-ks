@@ -73,7 +73,7 @@ function validateCreditCard(value){
 }
 
 // Define Vorpal (command line) Commands
-// -----------------------------
+// -------------------------------------
 // In general, the command method specifies mandatory arguments that are then supplied in the 'args' array. The validate function is run -- if it returns true, the action method is invoked. The callback returns the user to the command line prompt.
 
 // The 'backer' command lists the projects a backer has pledged to.
